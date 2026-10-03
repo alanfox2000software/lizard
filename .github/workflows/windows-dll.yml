@@ -1,0 +1,66 @@
+name: Build Windows DLLs
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.artifact-name }}
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Win32
+            artifact-name: lizard-windows-x86
+          - platform: x64
+            artifact-name: lizard-windows-x64
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build release DLL
+        shell: pwsh
+        run: >-
+          msbuild visual\VS2010\lizard.sln /m /t:Rebuild
+          /p:Configuration=Release
+          /p:Platform=${{ matrix.platform }}
+          /p:PlatformToolset=v143
+
+      - name: Stage distributable files
+        shell: pwsh
+        run: |
+          $packageRoot = "artifacts/${{ matrix.artifact-name }}"
+          $buildRoot = "visual/VS2010/bin/${{ matrix.platform }}_Release"
+
+          New-Item -ItemType Directory -Force -Path "$packageRoot/bin", "$packageRoot/lib", "$packageRoot/include" | Out-Null
+          Copy-Item "$buildRoot/liblizard.dll" "$packageRoot/bin/"
+          Copy-Item "$buildRoot/liblizard.lib" "$packageRoot/lib/"
+          Copy-Item "$buildRoot/liblizard.pdb" "$packageRoot/bin/" -ErrorAction SilentlyContinue
+          Copy-Item lib/lizard_compress.h, lib/lizard_decompress.h, lib/lizard_common.h, lib/lizard_frame.h "$packageRoot/include/"
+          Copy-Item LICENSE "$packageRoot/"
+
+          @(
+            "Lizard Windows DLL (${{ matrix.platform }})",
+            "",
+            "bin/liblizard.dll  - runtime DLL",
+            "lib/liblizard.lib  - MSVC import library",
+            "include/            - public C headers"
+          ) -join [Environment]::NewLine | Set-Content "$packageRoot/README.txt"
+
+      - name: Upload DLL package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: artifacts/${{ matrix.artifact-name }}
+          if-no-files-found: error
+          retention-days: 90
