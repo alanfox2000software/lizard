@@ -156,6 +156,18 @@ lizard undergoes automated testing using Azure Pipelines with the following comp
 - Visual Studio 2019 / 2022 (32-bit and 64-bit)
 
 
+Windows DLL downloads
+-------------------------
+
+The [Build Windows DLLs](../../actions/workflows/windows-dll.yml) GitHub Actions workflow builds optimized
+Microsoft Visual C++ DLL packages for both x86 and x64. It runs on pushes and pull requests, and can also
+be started from the **Actions** tab with **Run workflow**.
+
+After a successful run, download `lizard-windows-x86` or `lizard-windows-x64` from the run's **Artifacts**
+section. Each package contains the runtime DLL (`bin/liblizard.dll`), its MSVC import library
+(`lib/liblizard.lib`), public headers (`include/`), and the license.
+
+
 Documentation
 -------------------------
 
